@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Agent 部署手册</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0e10;
+    --surface: #121519;
+    --surface2: #1a1f26;
+    --border: #242b35;
+    --gold: #c9a84c;
+    --gold-light: #e8c96e;
+    --gold-dim: rgba(201,168,76,0.12);
+    --gold-dim2: rgba(201,168,76,0.06);
+    --teal: #4dd0c4;
+    --teal-dim: rgba(77,208,196,0.1);
+    --text: #c8d0dc;
+    --text-muted: #5e6a7e;
+    --text-bright: #edf1f7;
+    --green: #4caf7e;
+    --red: #e05c6a;
+    --orange: #e0924c;
+    --code-bg: #090b0d;
+    --radius: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 300;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  #canvas-bg {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    opacity: 0.35;
+  }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 268px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: sticky; top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: rgba(12,14,16,0.96);
+    backdrop-filter: blur(14px);
+    padding: 2rem 0;
+    display: flex; flex-direction: column;
+  }
+
+  .sidebar-logo {
+    padding: 0 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .sidebar-logo .app-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, #c9a84c, #e8c96e);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 0 28px rgba(201,168,76,0.35);
+  }
+
+  .sidebar-logo h2 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: 0.05em;
+  }
+
+  .sidebar-logo p { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+  .nav-section { padding: 0 1rem; margin-bottom: 0.5rem; }
+
+  .nav-section-title {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 0 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+
+  .nav-item:hover, .nav-item.active {
+    background: var(--gold-dim);
+    color: var(--gold-light);
+  }
+
+  .nav-item .icon { font-size: 0.9rem; width: 16px; text-align: center; }
+
+  /* ── Main ── */
+  .main { padding: 4rem 3.5rem; max-width: 900px; }
+
+  /* ── Hero ── */
+  .hero { margin-bottom: 5rem; position: relative; }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.75rem;
+    color: var(--gold-light);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.04em;
+  }
+
+  .hero h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, #c9a84c, #e8c96e, #f5d98a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc { font-size: 1.05rem; color: var(--text-muted); max-width: 580px; line-height: 2; }
+
+  .hero-stats {
+    display: flex; gap: 2.5rem;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .stat { text-align: left; }
+
+  .stat-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--gold-light);
+    display: block;
+  }
+
+  .stat-label { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 5rem; scroll-margin-top: 2rem; }
+
+  .section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,168,76,0.25);
+    padding: 0.25rem 0.6rem;
+    border-radius: 5px;
+    letter-spacing: 0.05em;
+  }
+
+  .section h2 { font-family: 'Noto Serif SC', serif; font-size: 1.6rem; font-weight: 600; color: var(--text-bright); }
+  .section h3 { font-family: 'Noto Serif SC', serif; font-size: 1.1rem; font-weight: 600; color: var(--text-bright); margin: 1.8rem 0 0.8rem; }
+
+  p { margin-bottom: 1rem; color: var(--text); font-size: 0.92rem; }
+
+  /* ── Cards ── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.4rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative; overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, var(--gold), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+
+  .card:hover { border-color: rgba(201,168,76,0.4); box-shadow: 0 4px 24px rgba(201,168,76,0.07); }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon { font-size: 1.4rem; margin-bottom: 0.6rem; }
+  .card h4 { font-size: 0.9rem; font-weight: 500; color: var(--text-bright); margin-bottom: 0.4rem; }
+  .card p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; margin: 0; }
+
+  /* ── Table ── */
+  .data-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.84rem; }
+
+  .data-table th {
+    background: var(--surface2);
+    color: var(--gold-light);
+    font-weight: 500;
+    padding: 0.8rem 1.2rem;
+    text-align: left;
+    border: 1px solid var(--border);
+    letter-spacing: 0.03em;
+  }
+
+  .data-table td {
+    padding: 0.72rem 1.2rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+
+  .data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .data-table tr:hover td { background: var(--gold-dim2); }
+
+  /* ── Tags ── */
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  .tag-green { background: rgba(76,175,126,0.12); color: var(--green); }
+  .tag-red { background: rgba(224,92,106,0.12); color: var(--red); }
+  .tag-gold { background: var(--gold-dim); color: var(--gold-light); }
+  .tag-teal { background: var(--teal-dim); color: var(--teal); }
+
+  /* ── Code Blocks ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 1.5rem 0;
+    overflow: hidden;
+  }
+
+  .code-header {
+    background: var(--surface2);
+    padding: 0.6rem 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold-light);
+    letter-spacing: 0.06em;
+  }
+
+  .code-dots { display: flex; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+
+  pre {
+    padding: 1.2rem 1.4rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.9;
+    color: #abb2bf;
+  }
+
+  .kw { color: #c678dd; }
+  .str { color: #98c379; }
+  .cm { color: #5c6370; font-style: italic; }
+  .fn { color: #61afef; }
+  .num { color: #d19a66; }
+  .op { color: #56b6c2; }
+  .var { color: #e06c75; }
+  .hl { color: var(--gold-light); }
+
+  /* ── Steps ── */
+  .steps {
+    counter-reset: step;
+    display: flex; flex-direction: column; gap: 0;
+    position: relative; padding-left: 2.5rem;
+  }
+
+  .steps::before {
+    content: '';
+    position: absolute; left: 0.75rem; top: 1.5rem; bottom: 1.5rem;
+    width: 1px;
+    background: linear-gradient(180deg, var(--gold), transparent);
+  }
+
+  .step {
+    counter-increment: step;
+    position: relative;
+    padding: 1.2rem 1.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .step:hover { border-color: rgba(201,168,76,0.35); }
+
+  .step::before {
+    content: counter(step);
+    position: absolute; left: -2.5rem; top: 1.2rem;
+    width: 1.5rem; height: 1.5rem;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; font-weight: 600;
+    color: #0c0e10;
+    box-shadow: 0 0 12px rgba(201,168,76,0.45);
+  }
+
+  .step h4 { font-size: 0.9rem; font-weight: 500; color: var(--text-bright); margin-bottom: 0.4rem; }
+  .step p { font-size: 0.83rem; color: var(--text-muted); margin: 0; }
+
+  /* ── Tip / Note / Warn ── */
+  .tip {
+    background: rgba(76,175,126,0.06);
+    border: 1px solid rgba(76,175,126,0.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 0.85rem;
+    color: var(--text);
+    display: flex; gap: 0.8rem; align-items: flex-start;
+  }
+
+  .note {
+    background: var(--gold-dim2);
+    border: 1px solid rgba(201,168,76,0.22);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 0.85rem;
+    color: var(--text);
+    display: flex; gap: 0.8rem; align-items: flex-start;
+  }
+
+  .warn {
+    background: rgba(224,92,106,0.06);
+    border: 1px solid rgba(224,92,106,0.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 0.85rem;
+    color: var(--text);
+    display: flex; gap: 0.8rem; align-items: flex-start;
+  }
+
+  .tip-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+
+  /* ── Inline code ── */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: rgba(201,168,76,0.1);
+    color: var(--gold-light);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+
+  /* ── Pill Grid ── */
+  .pill-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0; }
+
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--text);
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .pill:hover { background: var(--gold-dim); border-color: rgba(201,168,76,0.35); color: var(--gold-light); }
+
+  /* ── Plugin list ── */
+  .plugin-list { display: flex; flex-direction: column; gap: 0.8rem; margin: 1.2rem 0; }
+
+  .plugin-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    display: flex; align-items: flex-start; gap: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .plugin-item:hover { border-color: rgba(201,168,76,0.3); }
+
+  .plugin-icon {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .plugin-info h4 { font-size: 0.88rem; font-weight: 500; color: var(--text-bright); }
+  .plugin-info p { font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0; }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: linear-gradient(90deg, var(--gold), transparent); margin: 2.5rem 0; opacity: 0.25; }
+
+  /* ── Special banner ── */
+  .quote-banner {
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(77,208,196,0.06));
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 14px;
+    padding: 2rem;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .quote-banner::before {
+    content: '"';
+    position: absolute; top: -0.5rem; left: 1.2rem;
+    font-size: 6rem;
+    color: rgba(201,168,76,0.08);
+    font-family: serif;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .quote-banner p {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.05rem;
+    color: var(--gold-light);
+    font-weight: 400;
+    margin: 0;
+    line-height: 1.8;
+  }
+
+  .quote-banner .quote-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.6rem; font-family: 'Noto Sans SC', sans-serif; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 5rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .hero { animation: fadeUp 0.6s ease both; }
+  .section { animation: fadeUp 0.5s ease both; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+  @media (max-width: 768px) {
+    .wrapper { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 2rem 1.2rem; }
+    .hero h1 { font-size: 2rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .hero-stats { flex-wrap: wrap; gap: 1.5rem; }
+  }
+
+  /* ── Info rows ── */
+  .info-row {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.86rem;
+  }
+
+  .info-row:last-child { border-bottom: none; }
+  .info-row .label { color: var(--gold-light); font-weight: 500; min-width: 130px; font-size: 0.82rem; }
+  .info-row .val { color: var(--text); }
+
+  .info-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 1.2rem 0;
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas-bg"></canvas>
+
+<div class="wrapper">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="app-icon">⚡</div>
+      <h2>Hermes Agent</h2>
+      <p>Windows 部署手册 v2026</p>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">简介</div>
+      <a class="nav-item active" href="#intro">
+        <span class="icon">🔮</span> 什么是 Hermes Agent
+      </a>
+      <a class="nav-item" href="#features">
+        <span class="icon">✨</span> 核心创新
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Windows 部署</div>
+      <a class="nav-item" href="#prerequisites">
+        <span class="icon">📦</span> 前置依赖
+      </a>
+      <a class="nav-item" href="#wsl2">
+        <span class="icon">🪟</span> 安装 WSL2
+      </a>
+      <a class="nav-item" href="#ubuntu">
+        <span class="icon">🐧</span> 安装 Ubuntu
+      </a>
+      <a class="nav-item" href="#install">
+        <span class="icon">🚀</span> 安装 Hermes
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">接入应用</div>
+      <a class="nav-item" href="#qq">
+        <span class="icon">💬</span> 接入 QQ
+      </a>
+      <a class="nav-item" href="#wechat">
+        <span class="icon">💚</span> 接入微信
+      </a>
+      <a class="nav-item" href="#feishu">
+        <span class="icon">🪶</span> 接入飞书
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">进阶配置</div>
+      <a class="nav-item" href="#soul">
+        <span class="icon">👤</span> 个性化 SOUL.md
+      </a>
+      <a class="nav-item" href="#tools">
+        <span class="icon">🔧</span> 工具与工具集
+      </a>
+      <a class="nav-item" href="#skills">
+        <span class="icon">🧠</span> Skills 技能
+      </a>
+      <a class="nav-item" href="#memory">
+        <span class="icon">💾</span> 持久记忆
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">扩展</div>
+      <a class="nav-item" href="#skins">
+        <span class="icon">🎨</span> 皮肤与主题
+      </a>
+      <a class="nav-item" href="#mcp">
+        <span class="icon">🔌</span> MCP 扩展
+      </a>
+      <a class="nav-item" href="#cron">
+        <span class="icon">⏰</span> 定时任务
+      </a>
+      <a class="nav-item" href="#dashboard">
+        <span class="icon">📊</span> Web 仪表板
+      </a>
+      <a class="nav-item" href="#bestpractice">
+        <span class="icon">🏆</span> 最佳实践
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">⚡ Nous Research · 开源 AI Agent 框架 · 2026</div>
+      <h1>部署你的<br><span>Hermes Agent</span></h1>
+      <p class="hero-desc">
+        Hermes Agent 是由 Nous Research 开源的自主 AI Agent 框架，上线不到两个月 GitHub 星标就突破 12+ 万。
+        别的 AI 工具是「金鱼记忆」，Hermes Agent 是「会进化的伙伴」。
+      </p>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num">12万+</span>
+          <span class="stat-label">GitHub Stars</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">40+</span>
+          <span class="stat-label">内置工具</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">∞</span>
+          <span class="stat-label">MCP 扩展</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">自进化</span>
+          <span class="stat-label">核心特性</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 简介 -->
+    <section class="section" id="intro">
+      <div class="section-header">
+        <span class="section-num">00</span>
+        <h2>什么是 Hermes Agent</h2>
+      </div>
+
+      <div class="quote-banner">
+        <p>"An agent that grows with you" — 与你共同成长的 Agent</p>
+        <div class="quote-sub">核心定位：最大的特点是可以自进化。</div>
+      </div>
+
+      <p>
+        Hermes Agent 部署在你的服务器上，连接你的消息账号，它就成为你的持久个人智能体——学习你的项目、自动构建技能、随时随地触达你。不是聊天机器人，不是代码补全工具，而是一个住在你机器上、每天都在变聪明的智能体。
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h4>GitHub 地址</h4>
+          <p>github.com/nousresearch/hermes-agent</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏠</div>
+          <h4>官方网站</h4>
+          <p>hermes-agent.nousresearch.com</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📅</div>
+          <h4>发布时间</h4>
+          <p>2026 年 2 月底正式开源发布</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚖️</div>
+          <h4>开源协议</h4>
+          <p>MIT License，完全开源免费</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 核心创新 -->
+    <section class="section" id="features">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2>核心创新：内置自学习循环</h2>
+      </div>
+
+      <p>Hermes Agent 不是简单地调用 LLM，而是通过内置的学习循环不断优化自身：</p>
+
+      <div class="plugin-list">
+        <div class="plugin-item">
+          <div class="plugin-icon">🔄</div>
+          <div class="plugin-info">
+            <h4>自动从交互中生成 Skill（技能）</h4>
+            <p>每累计 15 次工具循环，自动在后台启动 Skill Review，将有价值的操作固化为可复用技能。</p>
+          </div>
+        </div>
+        <div class="plugin-item">
+          <div class="plugin-icon">📈</div>
+          <div class="plugin-info">
+            <h4>在使用中持续迭代技能</h4>
+            <p>发现可更新的现有技能时自动补充新经验；发现值得新建的技能时创建新技能文件。</p>
+          </div>
+        </div>
+        <div class="plugin-item">
+          <div class="plugin-icon">🧠</div>
+          <div class="plugin-info">
+            <h4>主动持久化知识和用户偏好</h4>
+            <p>通过 MEMORY.md 和 USER.md 跨会话持久化，记住你的项目、环境和习惯。</p>
+          </div>
+        </div>
+        <div class="plugin-item">
+          <div class="plugin-icon">🔍</div>
+          <div class="plugin-info">
+            <h4>跨会话构建对用户的深度理解</h4>
+            <p>所有历史对话存储在本地 SQLite，支持 FTS5 全文搜索 + LLM 摘要，几周前的内容也能找到。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 前置依赖 -->
+    <section class="section" id="prerequisites">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2>前置依赖</h2>
+      </div>
+
+      <div class="note">
+        <span class="tip-icon">💡</span>
+        <div><strong>唯一的前提条件是 Git。</strong>安装程序会自动处理其他所有事项——您无需手动安装 Python、Node.js、ripgrep 或 ffmpeg，安装程序会自动检测缺失的组件并为您安装。</div>
+      </div>
+
+      <p>安装程序将自动安装以下组件：</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>组件</th>
+            <th>说明</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>uv</code></td>
+            <td>快速 Python 包管理器</td>
+            <td><span class="tag tag-teal">自动安装</span></td>
+          </tr>
+          <tr>
+            <td><code>Python 3.11</code></td>
+            <td>通过 uv 安装，无需 sudo</td>
+            <td><span class="tag tag-teal">自动安装</span></td>
+          </tr>
+          <tr>
+            <td><code>Node.js v22</code></td>
+            <td>用于浏览器自动化和 WhatsApp 桥接</td>
+            <td><span class="tag tag-teal">自动安装</span></td>
+          </tr>
+          <tr>
+            <td><code>ripgrep</code></td>
+            <td>快速文件搜索</td>
+            <td><span class="tag tag-teal">自动安装</span></td>
+          </tr>
+          <tr>
+            <td><code>ffmpeg</code></td>
+            <td>用于 TTS 的音频格式转换</td>
+            <td><span class="tag tag-teal">自动安装</span></td>
+          </tr>
+          <tr>
+            <td><code>Git</code></td>
+            <td>版本控制工具</td>
+            <td><span class="tag tag-gold">需手动安装</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>安装 Git</h3>
+      <p>前往官网下载安装：<code>https://git-scm.com/?hl=zh-cn</code></p>
+    </section>
+
+    <!-- WSL2 -->
+    <section class="section" id="wsl2">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2>Windows：安装 WSL2</h2>
+      </div>
+
+      <div class="warn">
+        <span class="tip-icon">⚠️</span>
+        <div>原生 Windows 支持仍处于实验阶段，请安装 WSL2 后在其中运行 Hermes Agent。</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <h4>以管理员身份打开 PowerShell</h4>
+          <p>右键点击开始菜单 → 选择「Windows PowerShell（管理员）」或「终端（管理员）」。</p>
+        </div>
+        <div class="step">
+          <h4>执行 WSL 安装命令</h4>
+          <p>在 PowerShell 中输入以下命令，然后按回车：</p>
+        </div>
+        <div class="step">
+          <h4>重启计算机</h4>
+          <p>官方文档说重启一次即可，实际上可能需要 2–3 次重启。注意：是重启，不是关机再开机。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">POWERSHELL</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 安装 WSL2（管理员 PowerShell 中执行）</span>
+<span class="hl">wsl --install</span></pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div>安装完成后可以通过 <code>wsl --list --verbose</code> 查看已安装的发行版及其 WSL 版本。</div>
+      </div>
+    </section>
+
+    <!-- Ubuntu -->
+    <section class="section" id="ubuntu">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2>安装 Ubuntu 系统</h2>
+      </div>
+
+      <p>WSL2 安装完成后，安装 Ubuntu-24.04 发行版：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">POWERSHELL</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 列出已安装的发行版</span>
+<span class="hl">wsl --list --verbose</span>
+
+<span class="cm"># 安装 Ubuntu 24.04</span>
+<span class="hl">wsl --install -d Ubuntu-24.04</span></pre>
+      </div>
+
+      <h3>Windows 与 WSL 文件互通</h3>
+      <div class="steps">
+        <div class="step">
+          <h4>打开任意文件夹（如「此电脑」）</h4>
+          <p>在资源管理器中操作即可。</p>
+        </div>
+        <div class="step">
+          <h4>在地址栏输入 <code>\\wsl$</code> 并回车</h4>
+          <p>可以看到已安装的 WSL 发行版，如 Ubuntu。</p>
+        </div>
+        <div class="step">
+          <h4>进入对应发行版目录</h4>
+          <p>找到 <code>home/你的用户名/</code>，可以直接拖拽或复制粘贴文件。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 安装 Hermes -->
+    <section class="section" id="install">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2>安装 Hermes Agent</h2>
+      </div>
+
+      <p>无需任何前置依赖，在 WSL2 的 Ubuntu 终端中一键自动安装所有组件：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · WSL2/Ubuntu</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="hl">curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash</span></pre>
+      </div>
+
+      <div class="warn">
+        <span class="tip-icon">⚠️</span>
+        <div>
+          <strong>特别声明：</strong><br>
+          · 安装时<strong>无需翻墙</strong>，非要翻墙请自重（如果实在下载不动，那你翻吧）<br>
+          · <strong>程序员注意！</strong>请将 pip 镜像和 npm 镜像还原（别问，问就是坑，大坑，天坑）
+        </div>
+      </div>
+
+      <h3>安装流程说明</h3>
+
+      <div class="steps">
+        <div class="step">
+          <h4>等待自动安装依赖</h4>
+          <p>这部分安装时间有点长，保持网络畅通，耐心等待... 安装程序会自动检测并安装所有缺失组件。</p>
+        </div>
+        <div class="step">
+          <h4>输入 WSL 密码</h4>
+          <p>安装依赖完成后，输入 WSL 的用户密码即可进入下一步。</p>
+        </div>
+        <div class="step">
+          <h4>选择模型</h4>
+          <p>选择你熟悉的或有额度的模型，推荐选择 DeepSeek。如果选错了，事后执行 <code>hermes model</code> 可重新选择。</p>
+        </div>
+        <div class="step">
+          <h4>接入应用（可跳过）</h4>
+          <p>首次安装时可以先跳过应用接入，后续通过 <code>hermes gateway setup</code> 单独接入。</p>
+        </div>
+        <div class="step">
+          <h4>启动 Hermes</h4>
+          <p>到这里就成功了！执行 <code>hermes</code> 命令开始使用，或执行 <code>hermes gateway</code> 启动消息网关。</p>
+        </div>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">✅</span>
+        <div>加 <code>-x</code> 参数可以看到每一步的执行过程，便于排查问题：<br><code>curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash -x</code></div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 接入 QQ -->
+    <section class="section" id="qq">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2>接入应用：QQ</h2>
+      </div>
+
+      <p>执行以下命令启动应用接入向导：</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="hl">hermes gateway setup</span></pre>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <h4>在平台列表中选择 QQ Bot</h4>
+          <p>从列表中找到并选择「QQ Bot (configured)」选项。</p>
+        </div>
+        <div class="step">
+          <h4>选择扫码接入（推荐）</h4>
+          <p>选择「Scan QR code to add bot automatically (recommended)」，扫码接入就行，很简单哦～</p>
+        </div>
+        <div class="step">
+          <h4>配置消息授权方式</h4>
+          <p>选择 DM 配对审批（推荐）/ 允许所有直接消息 / 仅允许已列明的用户 OpenIDs。</p>
+        </div>
+        <div class="step">
+          <h4>后续全部 Yes，然后重启网关</h4>
+          <p>消息即可正常接收。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 接入微信 -->
+    <section class="section" id="wechat">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2>接入应用：微信</h2>
+      </div>
+
+      <p>微信的接入与 QQ 类似，但需要额外进行设备配对。</p>
+
+      <h3>授权配置选项</h3>
+      <div class="pill-grid">
+        <span class="pill">使用 DM 配对审批（推荐）</span>
+        <span class="pill">允许所有直接消息</span>
+        <span class="pill">仅允许已列明的用户 OpenIDs</span>
+        <span class="pill">禁用私信</span>
+      </div>
+
+      <h3>群聊处理方式</h3>
+      <div class="pill-grid">
+        <span class="pill">禁用群聊（推荐）</span>
+        <span class="pill">允许所有群聊</span>
+        <span class="pill">只允许列出的群聊 ID</span>
+      </div>
+
+      <div class="note">
+        <span class="tip-icon">🔗</span>
+        <div>
+          <strong>微信设备配对：</strong>与 QQ 不同，微信需要进行设备配对。<br>
+          向 Bot 发消息后，它会返回一个配对码，在 WSL 中执行以下命令完成配对：<br>
+          <code>hermes pairing approve weixin ZV5J582F</code>（ZV5J582F 为示例配对码）
+        </div>
+      </div>
+    </section>
+
+    <!-- 接入飞书 -->
+    <section class="section" id="feishu">
+      <div class="section-header">
+        <span class="section-num">08</span>
+        <h2>接入应用：飞书</h2>
+      </div>
+
+      <p>飞书接入方式与微信类似，同样需要配对，但流程更加简洁。</p>
+
+      <div class="steps">
+        <div class="step">
+          <h4>选择 Feishu / Lark</h4>
+          <p>在平台列表中选择「Feishu / Lark」，然后选择「Scan QR code to create a new bot automatically (recommended)」。</p>
+        </div>
+        <div class="step">
+          <h4>配置私信授权</h4>
+          <p>推荐选择「Use DM pairing approval」。</p>
+        </div>
+        <div class="step">
+          <h4>配置群聊处理</h4>
+          <p>推荐选择「Respond only when @mentioned in groups」，禁用群聊也可以。</p>
+        </div>
+        <div class="step">
+          <h4>完成配对</h4>
+          <p>与接入微信一样，需要配对：<code>hermes pairing approve feishu [配对码]</code></p>
+        </div>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div>支持接入的平台还包括：Telegram、Discord、Slack、Matrix、WhatsApp、Signal、Email、SMS（Twilio）、DingTalk、WeCom（企业微信）、BlueBubbles（iMessage）等。</div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- SOUL.md -->
+    <section class="section" id="soul">
+      <div class="section-header">
+        <span class="section-num">09</span>
+        <h2>个性化定制：SOUL.md</h2>
+      </div>
+
+      <p>Hermes Agent 的个性是完全可定制的。<code>SOUL.md</code> 是主要身份——它是系统提示词的第一部分，定义了 Agent 是谁。</p>
+
+      <div class="info-box">
+        <div class="info-row">
+          <div class="label">文件位置</div>
+          <div class="val"><code>~/.hermes/SOUL.md</code></div>
+        </div>
+        <div class="info-row">
+          <div class="label">系统优先级</div>
+          <div class="val">系统提示词中占据位置 #1</div>
+        </div>
+        <div class="info-row">
+          <div class="label">自动生成</div>
+          <div class="val">首次启动时自动创建默认版本，现有文件永远不会被覆盖</div>
+        </div>
+      </div>
+
+      <h3>SOUL.md 应该放什么内容</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">✅</div>
+          <h4>适合放入</h4>
+          <p>语调 · 沟通风格 · 直接程度 · 默认交互风格 · 风格上要避免什么 · 如何处理不确定性</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">❌</div>
+          <h4>不适合放入</h4>
+          <p>一次性的项目指令 · 文件路径 · 仓库规范 · 临时工作流细节</p>
+        </div>
+      </div>
+
+      <h3>参考配置示例</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">SOUL.md · YAML + MARKDOWN</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm">---</span>
+<span class="kw">name</span>: <span class="str">iwen</span>
+<span class="kw">version</span>: <span class="num">1.0</span>
+<span class="cm">---</span>
+
+<span class="hl"># 思考模式</span>
+<span class="cm">- 先验证后回答：不确定的 API、配置、路径，先查工具确认，不靠猜测</span>
+<span class="cm">- 先计划后执行：3步以上的任务，先列方案标风险，确认再动手</span>
+<span class="cm">- 交付即验证：做完一件事，主动给出「怎么检查它是否生效」</span>
+
+<span class="hl"># 自我约束</span>
+<span class="cm">- 不确定时直接说「我不确定」</span>
+<span class="cm">- 高危操作（删数据、重启、覆盖）必须预警</span>
+
+<span class="hl"># 输出纪律</span>
+<span class="cm">- 结论先行，代码/命令为主，少废话</span></pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div><strong>最佳实践：</strong>先和 Hermes 正常使用 1-2 天，展现你的工作风格和偏好，然后问它：「灵魂定义（SOUL.md）你有没有推荐的配置，基于我们的对话风格来建议？」它会读取历史会话，生成贴合你习惯的配置，再让它写入 <code>~/.hermes/SOUL.md</code>。</div>
+      </div>
+    </section>
+
+    <!-- 工具 -->
+    <section class="section" id="tools">
+      <div class="section-header">
+        <span class="section-num">10</span>
+        <h2>工具与工具集</h2>
+      </div>
+
+      <p>工具是扩展 Agent 能力的函数，被组织成逻辑上的<strong>工具集（Toolsets）</strong>，可以按平台启用或禁用。Hermes 内置了广泛的工具注册表。</p>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>类别</th><th>示例工具</th><th>描述</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>网络</td>
+            <td><code>web_search</code> <code>web_extract</code></td>
+            <td>搜索网络并提取页面内容</td>
+          </tr>
+          <tr>
+            <td>终端与文件</td>
+            <td><code>terminal</code> <code>read_file</code> <code>patch</code></td>
+            <td>执行命令并操作文件</td>
+          </tr>
+          <tr>
+            <td>浏览器</td>
+            <td><code>browser_navigate</code> <code>browser_vision</code></td>
+            <td>支持文本与视觉的交互式浏览器自动化</td>
+          </tr>
+          <tr>
+            <td>媒体</td>
+            <td><code>vision_analyze</code> <code>image_generate</code> <code>text_to_speech</code></td>
+            <td>多模态分析与生成</td>
+          </tr>
+          <tr>
+            <td>Agent 编排</td>
+            <td><code>todo</code> <code>clarify</code> <code>delegate_task</code></td>
+            <td>规划、澄清、代码执行与子 Agent 委托</td>
+          </tr>
+          <tr>
+            <td>记忆与召回</td>
+            <td><code>memory</code> <code>session_search</code></td>
+            <td>持久化记忆与会话搜索</td>
+          </tr>
+          <tr>
+            <td>自动化与交付</td>
+            <td><code>cronjob</code> <code>send_message</code></td>
+            <td>定时任务与出站消息传递</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>管理工具集</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 使用特定的 toolsets 启动</span>
+<span class="hl">hermes chat --toolsets "web,terminal"</span>
+
+<span class="cm"># 查看所有可用工具</span>
+<span class="hl">hermes tools</span>
+
+<span class="cm"># 在聊天中动态管理工具</span>
+<span class="fn">/tools list</span>
+<span class="fn">/tools disable browser</span>
+<span class="fn">/tools enable rl</span></pre>
+      </div>
+    </section>
+
+    <!-- Skills -->
+    <section class="section" id="skills">
+      <div class="section-header">
+        <span class="section-num">11</span>
+        <h2>Skills 技能系统</h2>
+      </div>
+
+      <p>技能是按需加载的知识文档，Agent 在需要时可将其载入。它们遵循<strong>渐进披露</strong>模式，最小化 token 使用量。</p>
+
+      <div class="info-box">
+        <div class="info-row">
+          <div class="label">技能目录</div>
+          <div class="val"><code>~/.hermes/skills/</code>（单一事实来源）</div>
+        </div>
+        <div class="info-row">
+          <div class="label">自动沉淀</div>
+          <div class="val">每累计 15 次工具循环，后台自动启动 Skill Review</div>
+        </div>
+      </div>
+
+      <h3>查看与管理技能</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 查看技能列表</span>
+<span class="hl">hermes skills list</span>
+
+<span class="cm"># 浏览所有 hub skills（官方优先）</span>
+<span class="hl">hermes skills browse</span>
+
+<span class="cm"># 搜索技能</span>
+<span class="hl">hermes skills search kubernetes</span>
+
+<span class="cm"># 安装前预览</span>
+<span class="hl">hermes skills inspect openai/skills/k8s</span>
+
+<span class="cm"># 安全扫描后安装</span>
+<span class="hl">hermes skills install openai/skills/k8s</span></pre>
+      </div>
+
+      <h3>自动技能沉淀的三种结果</h3>
+
+      <div class="plugin-list">
+        <div class="plugin-item">
+          <div class="plugin-icon">🔄</div>
+          <div class="plugin-info">
+            <h4>发现可更新的现有技能</h4>
+            <p>自动更新补充新经验。</p>
+          </div>
+        </div>
+        <div class="plugin-item">
+          <div class="plugin-icon">✨</div>
+          <div class="plugin-info">
+            <h4>发现值得新建的技能</h4>
+            <p>创建新技能文件，固化为可复用的操作流程。</p>
+          </div>
+        </div>
+        <div class="plugin-item">
+          <div class="plugin-icon">🔇</div>
+          <div class="plugin-info">
+            <h4>没有值得保存的内容</h4>
+            <p>输出 <code>Nothing to save.</code> 结束。整个过程在后台线程运行，不阻塞当前对话。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 持久记忆 -->
+    <section class="section" id="memory">
+      <div class="section-header">
+        <span class="section-num">12</span>
+        <h2>持久记忆系统</h2>
+      </div>
+
+      <p>Hermes Agent 拥有受限且经过精选的记忆，可以跨会话持久存在，记住你的偏好、项目、环境以及它所学到的知识。</p>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>文件</th><th>用途</th><th>字符限制</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>MEMORY.md</code></td>
+            <td>Agent 的个人笔记——环境事实、约定、学到的知识</td>
+            <td>2,200 字符（约 800 tokens）</td>
+          </tr>
+          <tr>
+            <td><code>USER.md</code></td>
+            <td>用户画像——你的偏好、沟通风格、期望</td>
+            <td>1,375 字符（约 500 tokens）</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>两个文件都存储在 <code>~/.hermes/memories/</code> 中，在会话开始时作为冻结快照注入到系统提示词中。</p>
+
+      <h3>记忆操作命令</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 查看历史会话</span>
+<span class="hl">hermes sessions list</span>
+
+<span class="cm"># 配置外部记忆 Provider（Honcho、mem0 等）</span>
+<span class="hl">hermes memory setup</span></pre>
+      </div>
+
+      <h3>什么该存，什么不该存</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">✅</div>
+          <h4>主动存储</h4>
+          <p>用户偏好 · 环境事实 · 修正记录 · 项目约定 · 已完成的工作 · 明确的要求</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚫</div>
+          <h4>跳过不存</h4>
+          <p>琐碎信息 · 容易重新发现的事实 · 原始数据转储 · 会话特定的临时信息</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="tip-icon">💡</span>
+        <div><strong>温馨提示：</strong>字符限制是为了保持记忆的聚焦。当记忆存满时，Agent 会合并或替换条目，以为新信息腾出空间。</div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 皮肤 -->
+    <section class="section" id="skins">
+      <div class="section-header">
+        <span class="section-num">13</span>
+        <h2>皮肤与主题</h2>
+      </div>
+
+      <p>皮肤控制着 Hermes CLI 的视觉呈现：横幅颜色、旋转器表情和动词、响应框标签、品牌文本以及工具活动前缀。</p>
+
+      <div class="note">
+        <span class="tip-icon">💡</span>
+        <div>对话风格（SOUL.md）和视觉风格（皮肤）是两个独立的概念：<strong>个性</strong>改变 Agent 的语气措辞；<strong>皮肤</strong>改变 CLI 的外观。</div>
+      </div>
+
+      <h3>切换皮肤</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · 聊天命令</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="fn">/skin</span>             <span class="cm"># 显示当前皮肤并列出可用皮肤</span>
+<span class="fn">/skin ares</span>        <span class="cm"># 切换到内置皮肤</span>
+<span class="fn">/skin mytheme</span>     <span class="cm"># 切换到自定义皮肤</span></pre>
+      </div>
+
+      <h3>内置皮肤一览</h3>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>皮肤</th><th>视觉特征</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>default</code></td><td>温暖金色边框，玉米丝色文本，可爱表情旋转器</td></tr>
+          <tr><td><code>ares</code></td><td>深红边框配青铜色点缀，侵略性旋转器动词</td></tr>
+          <tr><td><code>mono</code></td><td>全灰无彩色，适用于简约终端或屏幕录制</td></tr>
+          <tr><td><code>slate</code></td><td>皇家蓝色边框，冷静专业风</td></tr>
+          <tr><td><code>poseidon</code></td><td>深蓝到海沫色渐变，海洋主题</td></tr>
+          <tr><td><code>charizard</code></td><td>烧焦橙色到余烬色渐变，火焰主题</td></tr>
+          <tr><td><code>daylight</code></td><td>专为白色终端设计，深色文本配蓝色边框</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- MCP -->
+    <section class="section" id="mcp">
+      <div class="section-header">
+        <span class="section-num">14</span>
+        <h2>MCP 扩展 AI 工具能力</h2>
+      </div>
+
+      <p>MCP（Model Context Protocol）是由 Anthropic 提出的开放协议，定义了 AI Agent 与外部工具之间的标准通信接口。简单说：MCP 让 AI 可以「使用工具」，就像人类使用各种软件一样。</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">💻</div>
+          <h4>Stdio 服务器（本地）</h4>
+          <p>本地运行的子进程，通过 stdin/stdout 通信。低延迟，适合访问本地资源。</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌐</div>
+          <h4>HTTP 服务器（远程）</h4>
+          <p>连接到远程端点，适合组织内部 API 或托管服务，不在本地启动子进程。</p>
+        </div>
+      </div>
+
+      <h3>配置 GitHub MCP 服务器（示例）</h3>
+
+      <div class="steps">
+        <div class="step">
+          <h4>编辑配置文件</h4>
+          <p>编辑 <code>~/.hermes/config.yaml</code>，添加 mcp_servers 配置段。</p>
+        </div>
+        <div class="step">
+          <h4>获取 GitHub Personal Access Token</h4>
+          <p>GitHub 头像 → Settings → Developer settings → Personal access tokens → Generate new token，可全部勾选权限。</p>
+        </div>
+        <div class="step">
+          <h4>验证配置</h4>
+          <p>执行 <code>hermes tools list</code> 查看所有可用工具，包括 MCP 提供的。</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">YAML · ~/.hermes/config.yaml</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="kw">mcp_servers</span>:
+  <span class="fn">github</span>:
+    <span class="kw">command</span>: <span class="str">"npx"</span>
+    <span class="kw">args</span>: [<span class="str">"-y"</span>, <span class="str">"@modelcontextprotocol/server-github"</span>]
+    <span class="kw">env</span>:
+      <span class="var">GITHUB_PERSONAL_ACCESS_TOKEN</span>: <span class="str">"ghp_xxx..."</span></pre>
+      </div>
+
+      <h3>常用 MCP 服务器推荐</h3>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>MCP 服务器</th><th>功能</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>server-github</code></td><td>GitHub 仓库操作</td></tr>
+          <tr><td><code>server-postgres</code></td><td>PostgreSQL 查询</td></tr>
+          <tr><td><code>server-sqlite</code></td><td>SQLite 操作</td></tr>
+          <tr><td><code>server-filesystem</code></td><td>文件系统操作</td></tr>
+          <tr><td><code>server-brave-search</code></td><td>Brave 搜索</td></tr>
+          <tr><td><code>playwright-mcp</code></td><td>浏览器自动化</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Cron -->
+    <section class="section" id="cron">
+      <div class="section-header">
+        <span class="section-num">15</span>
+        <h2>定时任务（Cron）</h2>
+      </div>
+
+      <p>使用自然语言或 cron 表达式安排任务自动运行。Hermes 通过一个统一的 <code>cronjob</code> 工具来管理 cron。</p>
+
+      <h3>调度格式</h3>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>格式类型</th><th>示例</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>相对延迟（一次性）</td><td><code>30m</code> / <code>2h</code> / <code>1d</code></td><td>30 分钟后运行一次</td></tr>
+          <tr><td>间隔（重复）</td><td><code>every 30m</code> / <code>every 2h</code></td><td>每 30 分钟运行一次</td></tr>
+          <tr><td>Cron 表达式</td><td><code>0 9 * * 1-5</code></td><td>工作日上午 9:00</td></tr>
+        </tbody>
+      </table>
+
+      <h3>管理定时任务</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · 聊天命令</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 在聊天中添加定时任务</span>
+<span class="fn">/cron add</span> 30m <span class="str">"提醒我检查构建"</span>
+<span class="fn">/cron add</span> <span class="str">"every 2h"</span> <span class="str">"检查服务器状态"</span>
+<span class="fn">/cron add</span> <span class="str">'every 1h'</span> <span class="str">'看一次天气预报'</span> --skill taiyuan-weather
+
+<span class="cm"># 管理任务</span>
+<span class="fn">/cron list</span>                  <span class="cm"># 列出所有任务</span>
+<span class="fn">/cron pause</span> &lt;job_id&gt;        <span class="cm"># 暂停任务</span>
+<span class="fn">/cron resume</span> &lt;job_id&gt;       <span class="cm"># 恢复任务</span>
+<span class="fn">/cron remove</span> &lt;job_id&gt;       <span class="cm"># 删除任务</span></pre>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div>Cron 执行由网关守护进程处理。网关每 60 秒触发一次调度器，在独立的 Agent 会话中运行所有到期的任务。也可以通过自然对话触发：「每天上午 9 点提醒我喝水」</div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section class="section" id="dashboard">
+      <div class="section-header">
+        <span class="section-num">16</span>
+        <h2>Web 仪表板</h2>
+      </div>
+
+      <p>Web 仪表板是一个基于浏览器的用户界面，用于管理你的 Hermes Agent 安装。无需编辑 YAML 文件或运行 CLI 命令，通过简洁的 Web 界面即可配置设置、管理 API 密钥和监控会话。</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 启动仪表板（默认打开 http://127.0.0.1:9119）</span>
+<span class="hl">hermes dashboard</span>
+
+<span class="cm"># 自定义端口</span>
+<span class="hl">hermes dashboard --port 8080</span>
+
+<span class="cm"># 绑定到所有网络接口（共享网络请谨慎）</span>
+<span class="hl">hermes dashboard --host 0.0.0.0</span>
+
+<span class="cm"># 启动时不自动打开浏览器</span>
+<span class="hl">hermes dashboard --no-open</span></pre>
+      </div>
+
+      <div class="note">
+        <span class="tip-icon">🔒</span>
+        <div>仪表板完全在你的机器上运行——没有任何数据会离开本地主机，访问地址为 <code>http://127.0.0.1:9119</code>。</div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- 最佳实践 -->
+    <section class="section" id="bestpractice">
+      <div class="section-header">
+        <span class="section-num">17</span>
+        <h2>最佳实践：Hermes 八大亮点</h2>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>亮点</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tag-gold">①</span></td>
+            <td>智能授权</td>
+            <td>自动识别高危指令，清晰说明意图再请求授权</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">②</span></td>
+            <td>会话感知</td>
+            <td>通过 Session 阅读机制感知历史对话，可据此生成个性化 SOUL.md</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">③</span></td>
+            <td>多模型路由</td>
+            <td>Auxiliary 支持为 8 类任务分配独立模型，省钱且高效</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">④</span></td>
+            <td>配置解耦</td>
+            <td>密钥与配置分离，YAML 格式友好，修改直观</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">⑤</span></td>
+            <td>工具透明</td>
+            <td>IM 界面清晰打印每次 tool 调用过程，执行过程完全可见</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">⑥</span></td>
+            <td>多 Profile</td>
+            <td>多实例配置简单，一句话完成，轻松实现沙箱 / 主力分离</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">⑦</span></td>
+            <td>自动技能沉淀</td>
+            <td>将有价值操作自动总结为可复用技能，避免重复踩坑</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-gold">⑧</span></td>
+            <td>消息不丢失</td>
+            <td>20 个退出触发点，增量写入，无论正常 / 异常退出都不丢消息</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>实战案例：应用 Agent 完成复杂任务</h3>
+
+      <div class="quote-banner">
+        <p>帮我上网看看最近比较火的 Agent 有哪些？然后总结成文档，注意文档中要附上和这个技术相关的重要连接，例如：官网网站，重要博客，GitHub 等。接着，帮我生成一个静态页面，专门用来展示这个文档。网页要有科技感，完成后，告诉我资源存放在哪里，帮我在本地启动这个前端页面。</p>
+        <div class="quote-sub">→ Hermes 会自动搜索、整理文档、生成科技感页面并启动本地服务器，全程自动完成。</div>
+      </div>
+
+      <h3>多 Agent 协作</h3>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">BASH · 多 Agent 触发示例</span>
+          <div class="code-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        </div>
+        <pre><span class="cm"># 在聊天中触发多 Sub-Agent 并行协作</span>
+<span class="str">请 spawn 三个 subagent 来相互讨论 Hermes 的优劣势</span>
+
+<span class="cm"># 三个 Sub-Agent 会在同一 Session 中并行工作，各自发言，最终给出汇总</span></pre>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Hermes Agent 部署手册 · 基于 Nous Research 开源文档整理 · 2026</p>
+      <p style="margin-top:4px">GitHub: github.com/nousresearch/hermes-agent</p>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Starfield
+  const canvas = document.getElementById('canvas-bg');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const stars = Array.from({ length: 120 }, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    r: Math.random() * 1.2,
+    o: Math.random() * 0.5 + 0.1,
+    s: Math.random() * 0.3 + 0.05
+  }));
+
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      s.o += s.s * 0.02;
+      if (s.o > 0.7 || s.o < 0.05) s.s *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${s.o})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+
+  // Active nav on scroll
+  const sections = document.querySelectorAll('.section');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navItems.forEach(n => n.classList.remove('active'));
+        const active = document.querySelector(`.nav-item[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-10% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
